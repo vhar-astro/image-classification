@@ -100,7 +100,8 @@ void MainWindow::setupUI()
     
     classifyButton = new QPushButton("Classify and Move Image", this);
     classifyButton->setEnabled(false);
-    classifyButton->setStyleSheet("QPushButton:enabled { background-color: #4CAF50; color: white; font-weight: bold; padding: 10px; }");
+    classifyButton->setMinimumHeight(45);
+    classifyButton->setStyleSheet("QPushButton:enabled { background-color: #4CAF50; color: white; font-weight: bold; padding: 10px; } QPushButton:disabled { padding: 10px; }");
     classificationLayout->addWidget(classifyButton);
     
     mainLayout->addWidget(classificationGroup);
