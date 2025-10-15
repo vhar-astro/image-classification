@@ -1,0 +1,42 @@
+# Build directories
+build/
+cmake-build-*/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Compiled files
+*.o
+*.so
+*.a
+ImageClassificationTool
+
+# Qt MOC files
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+
+# IDE files
+.vscode/
+.idea/
+*.user
+*.pro.user
+
+# Output directories
+classified_images/
+
+# OS files
+.DS_Store
+Thumbs.db
+*~
+
+# Backup files
+*.bak
+*.swp
+*.swo
+
