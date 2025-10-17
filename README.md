@@ -1,16 +1,30 @@
-# Image Classification Tool
+# ML Dataset Preparation Tool
 
-A C++ GUI application for Linux/Ubuntu that assists with preparing machine learning image classification datasets. This tool provides an intuitive interface for manually labeling images and automatically organizing them into category-based folders.
+A C++ GUI application for Linux/Ubuntu that assists with preparing machine learning datasets. This dual-mode tool provides intuitive interfaces for both **image classification** and **object detection** dataset preparation.
 
 ## Features
 
-### Core Functionality
+### Dual-Mode Operation
+- **Mode Selection**: Choose between Image Classification or Object Detection mode on startup
+- **Image Classification Mode**: Assign single categories to entire images
+- **Object Detection Mode**: Draw bounding boxes and label objects within images
+
+### Image Classification Mode
 - **Image Loading**: Open individual images or entire folders containing JPG, PNG, and BMP files
 - **Visual Classification**: View images one at a time with a clear, resizable display
 - **Category Management**: Create custom categories on-the-fly or select from existing ones
 - **Automatic Organization**: Images are automatically copied to category-specific folders
 - **Progress Tracking**: Real-time progress bar and counter showing classification status
 - **Navigation**: Move forward, backward, or skip images during the classification process
+
+### Object Detection Mode
+- **Interactive Bounding Boxes**: Draw boxes by clicking and dragging on images
+- **Label Management**: Create and manage object labels (e.g., "person", "car", "dog")
+- **Box Editing**: Select, resize, and delete bounding boxes
+- **YOLO Format Export**: Annotations saved in YOLO format (normalized coordinates)
+- **Visual Feedback**: Color-coded boxes with labels displayed on image
+- **Batch Processing**: Navigate through multiple images with auto-save functionality
+- **Non-destructive Workflow**: Original images are copied to output directory
 
 ### User Interface
 - Clean, intuitive Qt-based GUI
@@ -21,9 +35,10 @@ A C++ GUI application for Linux/Ubuntu that assists with preparing machine learn
 
 ### File Management
 - Non-destructive workflow (copies images instead of moving them)
-- Automatic creation of category folders
+- Automatic creation of output folders
 - Duplicate filename handling with timestamp suffixes
-- Organized output structure: `classified_images/<category_name>/image.jpg`
+- **Classification Output**: `classified_images/<category_name>/image.jpg`
+- **Detection Output**: `annotated_images/images/` and `annotated_images/labels/`
 
 ## Prerequisites
 
@@ -134,47 +149,106 @@ After building, run the application using one of the provided launcher scripts:
 ### Getting Started
 
 1. **Launch the Application**
-   - Run the executable as shown above
-   - The main window will appear with the classification interface
+   - Run the executable using `./run_app.sh`
+   - A mode selection dialog will appear
 
-2. **Load Images**
+2. **Select Mode**
+   - Choose **"Image Classification"** for categorizing entire images
+   - Choose **"Object Detection"** for drawing bounding boxes around objects
+   - Click **"OK"** to proceed
+
+### Image Classification Mode
+
+1. **Load Images**
    - Click **"Open Single Image"** to classify a single image
    - Click **"Open Folder"** to load all images from a directory
    - Supported formats: JPG, JPEG, PNG, BMP (case-insensitive)
 
-3. **Create Categories**
+2. **Create Categories**
    - Type a category name in the "New Category" field
    - Click **"Add Category"** or press Enter
    - The category will appear in the dropdown menu
    - A folder will be created automatically in `classified_images/<category_name>/`
 
-4. **Classify Images**
+3. **Classify Images**
    - View the current image in the display area
    - Select a category from the dropdown menu
    - Click **"Classify and Move Image"**
    - The image will be copied to the category folder
    - The application automatically advances to the next image
 
-5. **Navigation**
+4. **Navigation**
    - **Previous**: Go back to the previous image
    - **Skip**: Move to the next image without classifying
    - **Next**: Move to the next image (enabled after classification or when reviewing)
 
-### Workflow Example
+### Object Detection Mode
 
+1. **Load Images**
+   - Click **"Open Single Image"** to annotate a single image
+   - Click **"Open Folder"** to load all images from a directory
+
+2. **Create Labels**
+   - Type an object label name (e.g., "person", "car", "dog")
+   - Click **"Add Label"** or press Enter
+   - The label will appear in the available labels list
+
+3. **Draw Bounding Boxes**
+   - Click and drag on the image to draw a bounding box
+   - A dialog will appear asking you to select a label
+   - Choose the appropriate label for the object
+   - The box will appear with the label displayed
+
+4. **Edit Bounding Boxes**
+   - **Select**: Click on a box to select it
+   - **Resize**: Drag the corner handles of a selected box
+   - **Delete**: Select a box and press Delete/Backspace, or click "Delete Selected Box"
+
+5. **Save Annotations**
+   - Click **"Save Annotations"** to save the current image's annotations
+   - Click **"Save & Next"** to save and move to the next image
+   - Annotations are saved in YOLO format in `annotated_images/labels/`
+   - Images are copied to `annotated_images/images/`
+   - A `classes.txt` file is created with all label names
+
+6. **Navigation**
+   - **Previous**: Go back to the previous image (annotations are auto-loaded)
+   - **Skip**: Move to the next image without saving
+   - **Next**: Move to the next image
+
+### Workflow Examples
+
+**Image Classification Workflow:**
 ```
-1. Click "Open Folder" → Select folder with 100 images
-2. Create categories: "cat", "dog", "bird"
-3. View first image → Select "cat" → Click "Classify and Move Image"
-4. Repeat for all images
-5. Find organized images in:
+1. Launch app → Select "Image Classification" mode
+2. Click "Open Folder" → Select folder with 100 images
+3. Create categories: "cat", "dog", "bird"
+4. View first image → Select "cat" → Click "Classify and Move Image"
+5. Repeat for all images
+6. Find organized images in:
    - classified_images/cat/
    - classified_images/dog/
    - classified_images/bird/
 ```
 
+**Object Detection Workflow:**
+```
+1. Launch app → Select "Object Detection" mode
+2. Click "Open Folder" → Select folder with images
+3. Create labels: "person", "car", "bicycle"
+4. Draw bounding boxes around objects in first image
+5. Assign labels to each box
+6. Click "Save & Next" to save and move to next image
+7. Repeat for all images
+8. Find annotations in:
+   - annotated_images/images/     (copied images)
+   - annotated_images/labels/     (YOLO .txt files)
+   - annotated_images/classes.txt (label names)
+```
+
 ### Output Structure
 
+**Image Classification Output:**
 ```
 project_directory/
 ├── classified_images/          # Output folder (created automatically)
@@ -190,6 +264,30 @@ project_directory/
 │       ├── image003.jpg
 │       └── ...
 ```
+
+**Object Detection Output:**
+```
+project_directory/
+├── annotated_images/           # Output folder (created automatically)
+│   ├── images/                # Copied original images
+│   │   ├── image001.jpg
+│   │   ├── image002.jpg
+│   │   └── ...
+│   ├── labels/                # YOLO format annotations
+│   │   ├── image001.txt       # One line per bounding box
+│   │   ├── image002.txt       # Format: <class_id> <x_center> <y_center> <width> <height>
+│   │   └── ...
+│   └── classes.txt            # Label names (one per line)
+```
+
+**YOLO Annotation Format:**
+Each `.txt` file contains one line per bounding box:
+```
+<class_id> <x_center> <y_center> <width> <height>
+```
+- All coordinates are normalized (0.0 to 1.0)
+- `class_id` corresponds to the line number in `classes.txt` (0-indexed)
+- Example: `0 0.5 0.5 0.3 0.4` (class 0, centered, 30% width, 40% height)
 
 ## Features in Detail
 
@@ -274,25 +372,36 @@ For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 ### Project Structure
 ```
 image-classification/
-├── main.cpp              # Application entry point
-├── MainWindow.h          # Main window header
-├── MainWindow.cpp        # Main window implementation
-├── CMakeLists.txt        # CMake build configuration
-├── build.sh              # Build script
-└── README.md             # This file
+├── main.cpp                      # Application entry point
+├── ModeSelectionDialog.h/cpp     # Mode selection dialog
+├── MainWindow.h/cpp              # Image classification window
+├── ObjectDetectionWindow.h/cpp   # Object detection window
+├── ImageCanvas.h/cpp             # Custom widget for drawing bounding boxes
+├── BoundingBox.h/cpp             # Bounding box data structure
+├── AnnotationManager.h/cpp       # YOLO format annotation manager
+├── CMakeLists.txt                # CMake build configuration
+├── build.sh                      # Build script
+├── run_app.sh                    # Launcher script (recommended)
+├── launch_clean.sh               # Alternative launcher script
+└── README.md                     # This file
 ```
 
 ### Extending the Application
 
 **Adding new image formats:**
-- Update `IMAGE_EXTENSIONS` in `MainWindow.h`
-- Add format to `isImageFile()` method in `MainWindow.cpp`
+- Update `IMAGE_EXTENSIONS` in `MainWindow.h` and `ObjectDetectionWindow.h`
+- Add format to `isImageFile()` methods
 
-**Customizing output folder:**
-- Modify `outputFolder` initialization in `MainWindow` constructor
+**Customizing output folders:**
+- Classification: Modify `outputFolder` in `MainWindow` constructor
+- Detection: Modify `setOutputDirectory()` call in `ObjectDetectionWindow` constructor
 
 **Adding keyboard shortcuts:**
-- Use Qt's `QShortcut` class in `setupUI()` method
+- Use Qt's `QShortcut` class in `setupUI()` methods
+
+**Supporting other annotation formats:**
+- Extend `AnnotationManager` class to support Pascal VOC XML or COCO JSON
+- Add format selection option in the UI
 
 ## License
 

@@ -56,6 +56,9 @@ unset LOCPATH
 unset GTK_PATH
 unset FONTCONFIG_PATH
 
+# Suppress GTK module warnings (Qt5 app doesn't need GTK sound modules)
+unset GTK_MODULES
+
 # Clean up any snap-related paths from environment variables
 export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/snap/' | tr '\n' ':' | sed 's/:$//')
 
