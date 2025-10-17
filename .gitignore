@@ -1,4 +1,5 @@
 # Build directories
+build/
 cmake-build-*/
 
 # CMake files
@@ -28,6 +29,8 @@ ui_*.h
 
 # Output directories
 classified_images/
+annotated_images/
+artifact/
 
 # OS files
 .DS_Store

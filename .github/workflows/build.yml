@@ -1,0 +1,175 @@
+name: Multi-Platform Build
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '5.15.2'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2019_64'
+          modules: 'qtbase'
+          cache: true
+
+      - name: Configure MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$env:Qt5_DIR
+
+      - name: Build
+        run: |
+          cd build
+          cmake --build . --config Release
+
+      - name: Deploy Qt dependencies
+        run: |
+          cd build/Release
+          windeployqt.exe MLDatasetTool.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
+
+      - name: Package Windows build
+        run: |
+          mkdir artifact
+          xcopy /E /I build\Release artifact\MLDatasetTool-Windows
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MLDatasetTool-Windows
+          path: artifact/MLDatasetTool-Windows
+          retention-days: 30
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake qtbase5-dev qt5-qmake
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cd build
+          make -j$(nproc)
+
+      - name: Package Linux build
+        run: |
+          mkdir -p artifact/MLDatasetTool-Linux
+          cp build/ImageClassificationTool artifact/MLDatasetTool-Linux/
+          cp run_app.sh artifact/MLDatasetTool-Linux/
+          cp launch_clean.sh artifact/MLDatasetTool-Linux/
+          chmod +x artifact/MLDatasetTool-Linux/*
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MLDatasetTool-Linux
+          path: artifact/MLDatasetTool-Linux
+          retention-days: 30
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '5.15.2'
+          host: 'mac'
+          target: 'desktop'
+          modules: 'qtbase'
+          cache: true
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$Qt5_DIR
+
+      - name: Build
+        run: |
+          cd build
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Deploy Qt dependencies
+        run: |
+          cd build
+          macdeployqt ImageClassificationTool.app -always-overwrite
+
+      - name: Package macOS build
+        run: |
+          mkdir -p artifact
+          cp -r build/ImageClassificationTool.app artifact/MLDatasetTool.app
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MLDatasetTool-macOS
+          path: artifact/MLDatasetTool.app
+          retention-days: 30
+
+  create-release:
+    name: Create Release Summary
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Display structure
+        run: ls -R
+
+      - name: Create release info
+        run: |
+          echo "# Build Successful! ✓" > release-info.md
+          echo "" >> release-info.md
+          echo "Multi-platform builds completed for commit ${{ github.sha }}" >> release-info.md
+          echo "" >> release-info.md
+          echo "## Available Artifacts:" >> release-info.md
+          echo "- **Windows**: MLDatasetTool.exe with Qt DLLs (standalone)" >> release-info.md
+          echo "- **Linux**: ImageClassificationTool binary with launcher scripts" >> release-info.md
+          echo "- **macOS**: MLDatasetTool.app bundle" >> release-info.md
+
+      - name: Upload release info
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-info
+          path: release-info.md
+          retention-days: 30

@@ -1,6 +1,6 @@
 # ML Dataset Preparation Tool
 
-A C++ GUI application for Linux/Ubuntu that assists with preparing machine learning datasets. This dual-mode tool provides intuitive interfaces for both **image classification** and **object detection** dataset preparation.
+A cross-platform C++ GUI application for **Windows 10** and **Linux/Ubuntu** that assists with preparing machine learning datasets. This dual-mode tool provides intuitive interfaces for both **image classification** and **object detection** dataset preparation.
 
 ## Features
 
@@ -43,12 +43,32 @@ A C++ GUI application for Linux/Ubuntu that assists with preparing machine learn
 ## Prerequisites
 
 ### System Requirements
+
+**Windows 10:**
+- Windows 10 (64-bit)
+- Visual Studio 2019 or 2022 (Community Edition is free)
+- CMake 3.10 or later
+- Qt5 (5.15.2 recommended)
+
+**Linux/Ubuntu:**
 - Ubuntu 18.04 or later (or other Linux distributions)
 - C++ compiler with C++11 support (g++ or clang++)
 - CMake 3.10 or later
 - Qt5 development libraries
 
-### Installing Dependencies on Ubuntu
+### Installing Dependencies
+
+#### Windows 10
+
+See **[BUILD_WINDOWS.md](BUILD_WINDOWS.md)** for comprehensive Windows installation and build instructions.
+
+**Quick Summary:**
+1. Install Visual Studio 2019/2022 with "Desktop development with C++"
+2. Install CMake from https://cmake.org/download/
+3. Install Qt5 from https://www.qt.io/download-qt-installer
+4. Run `build_windows.bat` to build
+
+#### Linux/Ubuntu
 
 **Option 1: Using the Installation Script (Recommended)**
 
@@ -77,7 +97,7 @@ sudo apt install qtbase5-dev qtbase5-dev-tools qtchooser qt5-qmake
 sudo apt install qt5-default qtbase5-dev qtbase5-dev-tools
 ```
 
-### Installing Dependencies on Other Distributions
+#### Other Linux Distributions
 
 **Fedora/RHEL/CentOS:**
 ```bash
@@ -91,7 +111,30 @@ sudo pacman -S base-devel cmake qt5-base
 
 ## Building the Application
 
-### Method 1: Using the Build Script (Recommended)
+### Windows 10
+
+**Quick Start:**
+```cmd
+REM Edit build_windows.bat to set your Qt path, then run:
+build_windows.bat
+```
+
+**Detailed Instructions:**
+See **[BUILD_WINDOWS.md](BUILD_WINDOWS.md)** for comprehensive step-by-step instructions including:
+- Visual Studio setup
+- Qt installation
+- CMake configuration
+- Building with CMake GUI or command line
+- Creating portable distributions
+
+**Output:**
+- Executable: `build\Release\MLDatasetTool.exe`
+- All required Qt DLLs are automatically copied
+- No additional scripts needed - just double-click the .exe to run!
+
+### Linux/Ubuntu
+
+**Method 1: Using the Build Script (Recommended)**
 
 ```bash
 # Make the build script executable
@@ -101,7 +144,7 @@ chmod +x build.sh
 ./build.sh
 ```
 
-### Method 2: Manual Build
+**Method 2: Manual Build**
 
 ```bash
 # Create build directory
@@ -119,23 +162,39 @@ make
 
 ## Running the Application
 
+### Windows 10
+
+After building, simply double-click the executable:
+```
+build\Release\MLDatasetTool.exe
+```
+
+Or use the launcher script:
+```cmd
+run_windows.bat
+```
+
+**No additional setup required!** All Qt dependencies are bundled with the executable.
+
+### Linux/Ubuntu
+
 After building, run the application using one of the provided launcher scripts:
 
-### Recommended Method (Avoids Library Conflicts)
+**Recommended Method (Avoids Library Conflicts)**
 
 ```bash
 # Use the clean launcher script (recommended)
 ./run_app.sh
 ```
 
-### Alternative Method (Maximum Isolation)
+**Alternative Method (Maximum Isolation)**
 
 ```bash
 # Use the isolated launcher for maximum protection
 ./launch_clean.sh
 ```
 
-### Direct Execution (May Have Issues)
+**Direct Execution (May Have Issues)**
 
 ```bash
 # Direct execution (may fail with snap package conflicts)
