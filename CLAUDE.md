@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a C++ GUI application for Linux/Ubuntu that assists with preparing machine learning image classification datasets. It provides an intuitive Qt5-based interface for manually labeling images and automatically organizing them into category-based folders.
+This is a dual-mode C++ GUI application for Linux/Ubuntu that assists with preparing machine learning datasets. It provides intuitive Qt5-based interfaces for:
+1. **Image Classification**: Manually labeling entire images and organizing them into category-based folders
+2. **Object Detection**: Drawing bounding boxes around objects and exporting annotations in YOLO format
 
 ## Build and Run Commands
 
@@ -36,28 +38,71 @@ Installs build-essential, cmake, and Qt5 development libraries (qtbase5-dev).
 ## Architecture
 
 ### Core Design Pattern
-Single-window Qt5 application using a Model-View architecture where `MainWindow` (QMainWindow) handles both UI and business logic. This is intentional for simplicity - there is no separate model layer.
+Dual-mode Qt5 application with mode selection on startup. Each mode has its own main window class:
+- **Image Classification Mode**: `MainWindow` (QMainWindow)
+- **Object Detection Mode**: `ObjectDetectionWindow` (QMainWindow)
+
+Both windows follow a Model-View architecture where the window handles both UI and business logic for simplicity.
 
 ### Key Components
 
-**MainWindow** (`MainWindow.h`, `MainWindow.cpp`):
-- Main application window containing all UI components and logic
+**ModeSelectionDialog** (`ModeSelectionDialog.h`, `ModeSelectionDialog.cpp`):
+- Initial dialog shown on application startup
+- Radio buttons for selecting Image Classification or Object Detection mode
+- Returns selected mode to main.cpp which launches appropriate window
+
+**MainWindow** (`MainWindow.h`, `MainWindow.cpp`) - Image Classification Mode:
+- Main application window for image classification
 - Manages image loading, category management, file operations, and navigation
 - Uses Qt's signal/slot mechanism for event handling
 
-**State Management:**
+**State Management (MainWindow):**
 - `imageFiles` (QStringList): All image paths to process
 - `processedImages` (QStringList): Classified images
 - `categories` (QSet<QString>): Available categories
 - `currentImageIndex`: Current position in image list
 - `outputFolder`: Default is `"classified_images"` in project root
 
-**Image Flow:**
+**Image Classification Flow:**
 1. User loads images via "Open Folder" or "Open Single Image"
 2. Images filtered by `IMAGE_EXTENSIONS` (JPG, PNG, BMP - case insensitive)
 3. User creates categories (stored in `categories` set + `categoryComboBox`)
 4. Classification copies (not moves) images to `classified_images/<category>/`
 5. Duplicate filenames get timestamp suffix: `filename_YYYYMMDD_HHMMSS.ext`
+
+**ObjectDetectionWindow** (`ObjectDetectionWindow.h`, `ObjectDetectionWindow.cpp`) - Object Detection Mode:
+- Main application window for object detection annotation
+- Manages image loading, label management, bounding box operations, and navigation
+- Integrates with ImageCanvas for interactive drawing
+
+**ImageCanvas** (`ImageCanvas.h`, `ImageCanvas.cpp`):
+- Custom QWidget for displaying images and drawing bounding boxes
+- Handles mouse events for drawing, selecting, resizing, and moving boxes
+- Manages coordinate transformations between screen and image space
+- Emits signals for box creation, selection, and modification
+
+**BoundingBox** (`BoundingBox.h`, `BoundingBox.cpp`):
+- Data structure representing a single bounding box
+- Stores rectangle coordinates, label, class ID, color, and selection state
+- Provides methods for YOLO format conversion (normalized coordinates)
+- Handles corner detection for resizing operations
+
+**AnnotationManager** (`AnnotationManager.h`, `AnnotationManager.cpp`):
+- Manages YOLO format annotation file I/O
+- Maintains label-to-class-ID mappings
+- Saves/loads annotations in YOLO format: `<class_id> <x_center> <y_center> <width> <height>`
+- Creates `classes.txt` file with label names
+- Copies images to output directory
+
+**Object Detection Flow:**
+1. User loads images via "Open Folder" or "Open Single Image"
+2. User creates object labels (e.g., "person", "car", "dog")
+3. User draws bounding boxes by clicking and dragging on ImageCanvas
+4. Dialog prompts for label selection for each new box
+5. Boxes can be selected, resized (drag corners), or deleted (Delete key)
+6. Annotations saved to `annotated_images/labels/<filename>.txt` in YOLO format
+7. Images copied to `annotated_images/images/`
+8. `classes.txt` file created with all label names
 
 ### Critical Implementation Details
 

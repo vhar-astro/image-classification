@@ -17,11 +17,21 @@ find_package(Qt5 REQUIRED COMPONENTS Core Widgets Gui)
 set(SOURCES
     main.cpp
     MainWindow.cpp
+    ModeSelectionDialog.cpp
+    ObjectDetectionWindow.cpp
+    ImageCanvas.cpp
+    BoundingBox.cpp
+    AnnotationManager.cpp
 )
 
 # Header files
 set(HEADERS
     MainWindow.h
+    ModeSelectionDialog.h
+    ObjectDetectionWindow.h
+    ImageCanvas.h
+    BoundingBox.h
+    AnnotationManager.h
 )
 
 # Create executable
