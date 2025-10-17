@@ -11,6 +11,7 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
+    needs: [build-macos]  # Run after macOS build completes
 
     steps:
       - name: Checkout code
@@ -150,6 +151,7 @@ jobs:
   build-macos:
     name: Build macOS
     runs-on: macos-latest
+    needs: [build-linux]  # Run after Linux build completes
 
     steps:
       - name: Checkout code
@@ -161,6 +163,7 @@ jobs:
           version: '5.15.2'
           host: 'mac'
           target: 'desktop'
+          arch: 'clang_64'
           # Don't specify modules - qtbase is included by default
           cache: true
 
