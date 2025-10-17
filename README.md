@@ -1,6 +1,6 @@
 # ML Dataset Preparation Tool
 
-A cross-platform C++ GUI application for **Windows 10** and **Linux/Ubuntu** that assists with preparing machine learning datasets. This dual-mode tool provides intuitive interfaces for both **image classification** and **object detection** dataset preparation.
+A cross-platform C++ GUI application for **Windows 10**, **macOS**, and **Linux/Ubuntu** that assists with preparing machine learning datasets. This dual-mode tool provides intuitive interfaces for both **image classification** and **object detection** dataset preparation.
 
 ## Features
 
@@ -50,6 +50,12 @@ A cross-platform C++ GUI application for **Windows 10** and **Linux/Ubuntu** tha
 - CMake 3.10 or later
 - Qt5 (5.15.2 recommended)
 
+**macOS:**
+- macOS 10.14 (Mojave) or later
+- Xcode Command Line Tools
+- CMake 3.10 or later
+- Qt5 (5.12 or later, 5.15.2 recommended)
+
 **Linux/Ubuntu:**
 - Ubuntu 18.04 or later (or other Linux distributions)
 - C++ compiler with C++11 support (g++ or clang++)
@@ -67,6 +73,30 @@ See **[BUILD_WINDOWS.md](BUILD_WINDOWS.md)** for comprehensive Windows installat
 2. Install CMake from https://cmake.org/download/
 3. Install Qt5 from https://www.qt.io/download-qt-installer
 4. Run `build_windows.bat` to build
+
+#### macOS
+
+See **[BUILD_MACOS.md](BUILD_MACOS.md)** for comprehensive macOS installation and build instructions.
+
+**Quick Summary:**
+```bash
+# Install Xcode Command Line Tools
+xcode-select --install
+
+# Install Homebrew (if not installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install CMake and Qt5
+brew install cmake qt@5
+
+# Set Qt path (Intel Mac)
+export QT_PATH=/usr/local/opt/qt@5
+# OR for Apple Silicon (M1/M2/M3)
+export QT_PATH=/opt/homebrew/opt/qt@5
+
+# Build
+./build_macos.sh
+```
 
 #### Linux/Ubuntu
 
@@ -132,6 +162,33 @@ See **[BUILD_WINDOWS.md](BUILD_WINDOWS.md)** for comprehensive step-by-step inst
 - All required Qt DLLs are automatically copied
 - No additional scripts needed - just double-click the .exe to run!
 
+### macOS
+
+**Quick Start:**
+```bash
+# Set Qt path for your Mac type
+export QT_PATH=/opt/homebrew/opt/qt@5  # Apple Silicon
+# OR
+export QT_PATH=/usr/local/opt/qt@5  # Intel
+
+# Build
+chmod +x build_macos.sh
+./build_macos.sh
+```
+
+**Detailed Instructions:**
+See **[BUILD_MACOS.md](BUILD_MACOS.md)** for comprehensive step-by-step instructions including:
+- Xcode Command Line Tools setup
+- Homebrew and Qt installation
+- CMake configuration
+- Building with different methods
+- Creating DMG installers
+
+**Output:**
+- Application bundle: `build/MLDatasetTool.app`
+- All required Qt frameworks are automatically bundled
+- Just double-click the .app to run!
+
 ### Linux/Ubuntu
 
 **Method 1: Using the Build Script (Recommended)**
@@ -175,6 +232,23 @@ run_windows.bat
 ```
 
 **No additional setup required!** All Qt dependencies are bundled with the executable.
+
+### macOS
+
+After building, simply double-click the application bundle:
+```bash
+open build/MLDatasetTool.app
+```
+
+Or use the launcher script:
+```bash
+chmod +x run_macos.sh
+./run_macos.sh
+```
+
+**No additional setup required!** All Qt frameworks are bundled in the .app.
+
+**Note:** On first launch, you may need to right-click the app and select "Open" to bypass Gatekeeper security.
 
 ### Linux/Ubuntu
 

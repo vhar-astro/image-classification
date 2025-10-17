@@ -23,7 +23,7 @@ jobs:
           host: 'windows'
           target: 'desktop'
           arch: 'win64_msvc2019_64'
-          modules: 'qtbase'
+          # Don't specify modules - qtbase is included by default
           cache: true
 
       - name: Configure MSVC
@@ -31,26 +31,47 @@ jobs:
         with:
           arch: x64
 
+      - name: Setup build environment
+        run: |
+          echo "Qt5_DIR=$env:Qt5_DIR" >> $env:GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=$env:Qt5_DIR" >> $env:GITHUB_ENV
+
+      - name: Clean build directory
+        run: |
+          if (Test-Path build) { Remove-Item -Recurse -Force build }
+
       - name: Configure CMake
         run: |
           mkdir build
           cd build
-          cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$env:Qt5_DIR
+          cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt5_DIR"
 
       - name: Build
         run: |
           cd build
           cmake --build . --config Release
 
+      - name: Verify build output
+        run: |
+          if (Test-Path build\Release\MLDatasetTool.exe) {
+            Write-Host "✓ MLDatasetTool.exe built successfully"
+            Get-Item build\Release\MLDatasetTool.exe | Format-List
+          } else {
+            Write-Error "✗ MLDatasetTool.exe not found!"
+            exit 1
+          }
+
       - name: Deploy Qt dependencies
         run: |
-          cd build/Release
+          cd build\Release
           windeployqt.exe MLDatasetTool.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
+          Write-Host "✓ Qt dependencies deployed"
 
       - name: Package Windows build
         run: |
           mkdir artifact
           xcopy /E /I build\Release artifact\MLDatasetTool-Windows
+          Write-Host "✓ Windows build packaged"
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
@@ -70,18 +91,42 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake qtbase5-dev qt5-qmake
+          sudo apt-get install -y build-essential cmake qtbase5-dev qtbase5-dev-tools qt5-qmake
+          echo "✓ Dependencies installed"
+
+      - name: Verify Qt installation
+        run: |
+          qmake --version
+          cmake --version
+          echo "✓ Qt and CMake verified"
+
+      - name: Clean build directory
+        run: |
+          rm -rf build
+          echo "✓ Build directory cleaned"
 
       - name: Configure CMake
         run: |
           mkdir build
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
+          echo "✓ CMake configured"
 
       - name: Build
         run: |
           cd build
           make -j$(nproc)
+          echo "✓ Build completed"
+
+      - name: Verify build output
+        run: |
+          if [ -f build/ImageClassificationTool ]; then
+            echo "✓ ImageClassificationTool built successfully"
+            ls -lh build/ImageClassificationTool
+          else
+            echo "✗ ImageClassificationTool not found!"
+            exit 1
+          fi
 
       - name: Package Linux build
         run: |
@@ -89,7 +134,11 @@ jobs:
           cp build/ImageClassificationTool artifact/MLDatasetTool-Linux/
           cp run_app.sh artifact/MLDatasetTool-Linux/
           cp launch_clean.sh artifact/MLDatasetTool-Linux/
-          chmod +x artifact/MLDatasetTool-Linux/*
+          cp README.md artifact/MLDatasetTool-Linux/
+          chmod +x artifact/MLDatasetTool-Linux/ImageClassificationTool
+          chmod +x artifact/MLDatasetTool-Linux/run_app.sh
+          chmod +x artifact/MLDatasetTool-Linux/launch_clean.sh
+          echo "✓ Linux build packaged"
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
@@ -112,29 +161,73 @@ jobs:
           version: '5.15.2'
           host: 'mac'
           target: 'desktop'
-          modules: 'qtbase'
+          # Don't specify modules - qtbase is included by default
           cache: true
+
+      - name: Verify Qt installation
+        run: |
+          echo "Qt5_DIR=$Qt5_DIR"
+          qmake --version
+          echo "✓ Qt verified"
+
+      - name: Clean build directory
+        run: |
+          rm -rf build
+          echo "✓ Build directory cleaned"
 
       - name: Configure CMake
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$Qt5_DIR
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$Qt5_DIR" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.14
+          echo "✓ CMake configured"
 
       - name: Build
         run: |
           cd build
           make -j$(sysctl -n hw.ncpu)
+          echo "✓ Build completed"
+
+      - name: Verify build output
+        run: |
+          if [ -d build/MLDatasetTool.app ]; then
+            echo "✓ MLDatasetTool.app built successfully"
+            ls -lh build/MLDatasetTool.app/Contents/MacOS/
+          else
+            echo "✗ MLDatasetTool.app not found!"
+            exit 1
+          fi
 
       - name: Deploy Qt dependencies
         run: |
           cd build
-          macdeployqt ImageClassificationTool.app -always-overwrite
+          macdeployqt MLDatasetTool.app -always-overwrite
+          echo "✓ Qt frameworks deployed"
+
+      - name: Verify Qt frameworks
+        run: |
+          if [ -d build/MLDatasetTool.app/Contents/Frameworks ]; then
+            echo "✓ Qt frameworks bundled"
+            ls -la build/MLDatasetTool.app/Contents/Frameworks/
+          else
+            echo "⚠ Warning: Qt frameworks not found"
+          fi
 
       - name: Package macOS build
         run: |
           mkdir -p artifact
-          cp -r build/ImageClassificationTool.app artifact/MLDatasetTool.app
+          cp -r build/MLDatasetTool.app artifact/
+          echo "✓ macOS build packaged"
+
+      - name: Create DMG (optional)
+        run: |
+          # Create a simple DMG for distribution
+          hdiutil create -volname "ML Dataset Tool" \
+                         -srcfolder artifact/MLDatasetTool.app \
+                         -ov -format UDZO \
+                         artifact/MLDatasetTool.dmg
+          echo "✓ DMG created"
+        continue-on-error: true
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
@@ -142,6 +235,15 @@ jobs:
           name: MLDatasetTool-macOS
           path: artifact/MLDatasetTool.app
           retention-days: 30
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: MLDatasetTool-macOS-DMG
+          path: artifact/MLDatasetTool.dmg
+          retention-days: 30
+        if: success()
+        continue-on-error: true
 
   create-release:
     name: Create Release Summary
@@ -152,20 +254,55 @@ jobs:
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Display structure
-        run: ls -R
+        run: |
+          echo "=== Artifact Structure ==="
+          ls -R artifacts/
+          echo ""
+          echo "=== File Sizes ==="
+          du -sh artifacts/*
 
       - name: Create release info
         run: |
-          echo "# Build Successful! ✓" > release-info.md
+          echo "# ML Dataset Preparation Tool - Build Successful! ✓" > release-info.md
           echo "" >> release-info.md
-          echo "Multi-platform builds completed for commit ${{ github.sha }}" >> release-info.md
+          echo "Multi-platform builds completed successfully!" >> release-info.md
+          echo "" >> release-info.md
+          echo "**Commit:** \`${{ github.sha }}\`" >> release-info.md
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> release-info.md
+          echo "**Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> release-info.md
           echo "" >> release-info.md
           echo "## Available Artifacts:" >> release-info.md
-          echo "- **Windows**: MLDatasetTool.exe with Qt DLLs (standalone)" >> release-info.md
-          echo "- **Linux**: ImageClassificationTool binary with launcher scripts" >> release-info.md
-          echo "- **macOS**: MLDatasetTool.app bundle" >> release-info.md
+          echo "" >> release-info.md
+          echo "### Windows 10" >> release-info.md
+          echo "- **File:** \`MLDatasetTool-Windows.zip\`" >> release-info.md
+          echo "- **Contents:** MLDatasetTool.exe with all Qt DLLs (standalone)" >> release-info.md
+          echo "- **Usage:** Extract and double-click \`MLDatasetTool.exe\`" >> release-info.md
+          echo "" >> release-info.md
+          echo "### macOS 10.14+" >> release-info.md
+          echo "- **File:** \`MLDatasetTool-macOS.zip\` or \`MLDatasetTool-macOS-DMG.zip\`" >> release-info.md
+          echo "- **Contents:** MLDatasetTool.app bundle with Qt frameworks" >> release-info.md
+          echo "- **Usage:** Extract and double-click \`MLDatasetTool.app\`" >> release-info.md
+          echo "- **Note:** Right-click and select 'Open' on first launch (Gatekeeper)" >> release-info.md
+          echo "" >> release-info.md
+          echo "### Linux/Ubuntu 18.04+" >> release-info.md
+          echo "- **File:** \`MLDatasetTool-Linux.zip\`" >> release-info.md
+          echo "- **Contents:** ImageClassificationTool binary with launcher scripts" >> release-info.md
+          echo "- **Usage:** Extract and run \`./run_app.sh\`" >> release-info.md
+          echo "" >> release-info.md
+          echo "## Features:" >> release-info.md
+          echo "- **Dual-Mode Operation:** Image Classification and Object Detection" >> release-info.md
+          echo "- **Cross-Platform:** Windows, macOS, and Linux support" >> release-info.md
+          echo "- **YOLO Format:** Object detection annotations in YOLO format" >> release-info.md
+          echo "- **Non-Destructive:** Original images are preserved" >> release-info.md
+          echo "" >> release-info.md
+          echo "## Documentation:" >> release-info.md
+          echo "- Windows: See \`BUILD_WINDOWS.md\`" >> release-info.md
+          echo "- macOS: See \`BUILD_MACOS.md\`" >> release-info.md
+          echo "- Linux: See \`README.md\`" >> release-info.md
 
       - name: Upload release info
         uses: actions/upload-artifact@v4
