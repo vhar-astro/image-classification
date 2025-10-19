@@ -11,7 +11,7 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
-    needs: [build-macos]  # Run after macOS build completes
+    # FIXED: Removed dependency on build-macos to allow parallel execution
 
     steps:
       - name: Checkout code
@@ -34,23 +34,34 @@ jobs:
 
       - name: Setup build environment
         run: |
-          echo "Qt5_DIR=$env:Qt5_DIR" >> $env:GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=$env:Qt5_DIR" >> $env:GITHUB_ENV
+          echo "Qt5_DIR=$env:Qt5_DIR"
+          echo "CMAKE_PREFIX_PATH=$env:Qt5_DIR"
 
       - name: Clean build directory
         run: |
           if (Test-Path build) { Remove-Item -Recurse -Force build }
+          Write-Host "✓ Build directory cleaned"
 
       - name: Configure CMake
         run: |
           mkdir build
           cd build
           cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt5_DIR"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "CMake configuration failed!"
+            exit 1
+          }
+          Write-Host "✓ CMake configured"
 
       - name: Build
         run: |
           cd build
           cmake --build . --config Release
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Build failed!"
+            exit 1
+          }
+          Write-Host "✓ Build completed"
 
       - name: Verify build output
         run: |
@@ -59,14 +70,23 @@ jobs:
             Get-Item build\Release\MLDatasetTool.exe | Format-List
           } else {
             Write-Error "✗ MLDatasetTool.exe not found!"
+            Write-Host "Contents of build directory:"
+            Get-ChildItem -Recurse build | Select-Object FullName
             exit 1
           }
 
-      - name: Deploy Qt dependencies
+      - name: Verify Qt deployment (already done by CMake)
         run: |
-          cd build\Release
-          windeployqt.exe MLDatasetTool.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
-          Write-Host "✓ Qt dependencies deployed"
+          Write-Host "Checking for Qt DLLs in Release directory..."
+          if (Test-Path build\Release\Qt5Core.dll) {
+            Write-Host "✓ Qt dependencies already deployed by CMake"
+            Get-ChildItem build\Release\*.dll | Select-Object Name
+          } else {
+            Write-Host "⚠ Qt DLLs not found, running windeployqt manually..."
+            cd build\Release
+            windeployqt.exe MLDatasetTool.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
+            Write-Host "✓ Qt dependencies deployed manually"
+          }
 
       - name: Package Windows build
         run: |
@@ -84,6 +104,7 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
+    # FIXED: Removed dependency to allow parallel execution
 
     steps:
       - name: Checkout code
@@ -126,6 +147,8 @@ jobs:
             ls -lh build/ImageClassificationTool
           else
             echo "✗ ImageClassificationTool not found!"
+            echo "Contents of build directory:"
+            ls -la build/
             exit 1
           fi
 
@@ -151,7 +174,7 @@ jobs:
   build-macos:
     name: Build macOS
     runs-on: macos-latest
-    needs: [build-linux]  # Run after Linux build completes
+    # FIXED: Removed dependency on build-linux to allow parallel execution
 
     steps:
       - name: Checkout code
@@ -198,22 +221,25 @@ jobs:
             ls -lh build/MLDatasetTool.app/Contents/MacOS/
           else
             echo "✗ MLDatasetTool.app not found!"
+            echo "Contents of build directory:"
+            ls -la build/
             exit 1
           fi
 
-      - name: Deploy Qt dependencies
+      - name: Verify Qt deployment (already done by CMake)
         run: |
-          cd build
-          macdeployqt MLDatasetTool.app -always-overwrite
-          echo "✓ Qt frameworks deployed"
-
-      - name: Verify Qt frameworks
-        run: |
+          echo "Checking for Qt frameworks..."
           if [ -d build/MLDatasetTool.app/Contents/Frameworks ]; then
-            echo "✓ Qt frameworks bundled"
+            echo "✓ Qt frameworks already bundled by CMake"
             ls -la build/MLDatasetTool.app/Contents/Frameworks/
           else
-            echo "⚠ Warning: Qt frameworks not found"
+            echo "⚠ Qt frameworks not found, running macdeployqt manually..."
+            cd build
+            macdeployqt MLDatasetTool.app -always-overwrite
+            echo "✓ Qt frameworks deployed manually"
+            if [ -d MLDatasetTool.app/Contents/Frameworks ]; then
+              ls -la MLDatasetTool.app/Contents/Frameworks/
+            fi
           fi
 
       - name: Package macOS build
