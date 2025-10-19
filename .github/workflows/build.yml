@@ -173,7 +173,7 @@ jobs:
 
   build-macos:
     name: Build macOS
-    runs-on: macos-latest
+    runs-on: macos-13  # Use macOS 13 (x86_64) because Qt 5.15.2 doesn't support arm64
     # FIXED: Removed dependency on build-linux to allow parallel execution
 
     steps:
