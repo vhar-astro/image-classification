@@ -46,7 +46,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt5_DIR"
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt5_DIR"
           if ($LASTEXITCODE -ne 0) {
             Write-Error "CMake configuration failed!"
             exit 1
