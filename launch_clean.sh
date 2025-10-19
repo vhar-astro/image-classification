@@ -18,15 +18,15 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Check if executable exists
-if [ ! -f "./build/ImageClassificationTool" ]; then
+if [ ! -f "./ImageClassificationTool" ]; then
     echo -e "${RED}Error: ImageClassificationTool executable not found!${NC}"
     echo "Please build the application first by running: ./build.sh"
     exit 1
 fi
 
 # Make executable if needed
-if [ ! -x "./build/ImageClassificationTool" ]; then
-    chmod +x ./build/ImageClassificationTool
+if [ ! -x "./ImageClassificationTool" ]; then
+    chmod +x ./ImageClassificationTool
 fi
 
 echo -e "${BLUE}Launching with completely isolated environment...${NC}"
@@ -45,4 +45,4 @@ env -i \
     LD_LIBRARY_PATH="/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu" \
     QT_QPA_PLATFORM="xcb" \
     QT_PLUGIN_PATH="/usr/lib/x86_64-linux-gnu/qt5/plugins" \
-    ./build/ImageClassificationTool "$@"
+    ./ImageClassificationTool "$@"

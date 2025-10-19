@@ -19,16 +19,16 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Check if executable exists
-if [ ! -f "./build/ImageClassificationTool" ]; then
+if [ ! -f "./ImageClassificationTool" ]; then
     echo -e "${RED}Error: ImageClassificationTool executable not found!${NC}"
-    echo "Please build the application first by running: ./build.sh"
+    echo "Please build the application first by running: ..sh"
     exit 1
 fi
 
 # Check if executable is executable
-if [ ! -x "./build/ImageClassificationTool" ]; then
+if [ ! -x "./ImageClassificationTool" ]; then
     echo -e "${YELLOW}Warning: Making executable file executable...${NC}"
-    chmod +x ./build/ImageClassificationTool
+    chmod +x ./ImageClassificationTool
 fi
 
 echo -e "${BLUE}Cleaning environment variables...${NC}"
@@ -78,4 +78,4 @@ echo -e "${BLUE}Launching Image Classification Tool...${NC}"
 echo ""
 
 # Launch the application with the clean environment
-exec ./build/ImageClassificationTool "$@"
+exec ./ImageClassificationTool "$@"
