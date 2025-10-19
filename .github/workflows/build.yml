@@ -1,0 +1,341 @@
+name: Multi-Platform Build
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    # FIXED: Removed dependency on build-macos to allow parallel execution
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '5.15.2'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2019_64'
+          # Don't specify modules - qtbase is included by default
+          cache: true
+
+      - name: Configure MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup build environment
+        run: |
+          echo "Qt5_DIR=$env:Qt5_DIR"
+          echo "CMAKE_PREFIX_PATH=$env:Qt5_DIR"
+
+      - name: Clean build directory
+        run: |
+          if (Test-Path build) { Remove-Item -Recurse -Force build }
+          Write-Host "✓ Build directory cleaned"
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt5_DIR"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "CMake configuration failed!"
+            exit 1
+          }
+          Write-Host "✓ CMake configured"
+
+      - name: Build
+        run: |
+          cd build
+          cmake --build . --config Release
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Build failed!"
+            exit 1
+          }
+          Write-Host "✓ Build completed"
+
+      - name: Verify build output
+        run: |
+          if (Test-Path build\Release\MLDatasetTool.exe) {
+            Write-Host "✓ MLDatasetTool.exe built successfully"
+            Get-Item build\Release\MLDatasetTool.exe | Format-List
+          } else {
+            Write-Error "✗ MLDatasetTool.exe not found!"
+            Write-Host "Contents of build directory:"
+            Get-ChildItem -Recurse build | Select-Object FullName
+            exit 1
+          }
+
+      - name: Verify Qt deployment (already done by CMake)
+        run: |
+          Write-Host "Checking for Qt DLLs in Release directory..."
+          if (Test-Path build\Release\Qt5Core.dll) {
+            Write-Host "✓ Qt dependencies already deployed by CMake"
+            Get-ChildItem build\Release\*.dll | Select-Object Name
+          } else {
+            Write-Host "⚠ Qt DLLs not found, running windeployqt manually..."
+            cd build\Release
+            windeployqt.exe MLDatasetTool.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
+            Write-Host "✓ Qt dependencies deployed manually"
+          }
+
+      - name: Package Windows build
+        run: |
+          mkdir artifact
+          xcopy /E /I build\Release artifact\MLDatasetTool-Windows
+          Write-Host "✓ Windows build packaged"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MLDatasetTool-Windows
+          path: artifact/MLDatasetTool-Windows
+          retention-days: 30
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    # FIXED: Removed dependency to allow parallel execution
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake qtbase5-dev qtbase5-dev-tools qt5-qmake
+          echo "✓ Dependencies installed"
+
+      - name: Verify Qt installation
+        run: |
+          qmake --version
+          cmake --version
+          echo "✓ Qt and CMake verified"
+
+      - name: Clean build directory
+        run: |
+          rm -rf build
+          echo "✓ Build directory cleaned"
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          echo "✓ CMake configured"
+
+      - name: Build
+        run: |
+          cd build
+          make -j$(nproc)
+          echo "✓ Build completed"
+
+      - name: Verify build output
+        run: |
+          if [ -f build/ImageClassificationTool ]; then
+            echo "✓ ImageClassificationTool built successfully"
+            ls -lh build/ImageClassificationTool
+          else
+            echo "✗ ImageClassificationTool not found!"
+            echo "Contents of build directory:"
+            ls -la build/
+            exit 1
+          fi
+
+      - name: Package Linux build
+        run: |
+          mkdir -p artifact/MLDatasetTool-Linux
+          cp build/ImageClassificationTool artifact/MLDatasetTool-Linux/
+          cp run_app.sh artifact/MLDatasetTool-Linux/
+          cp launch_clean.sh artifact/MLDatasetTool-Linux/
+          cp README.md artifact/MLDatasetTool-Linux/
+          chmod +x artifact/MLDatasetTool-Linux/ImageClassificationTool
+          chmod +x artifact/MLDatasetTool-Linux/run_app.sh
+          chmod +x artifact/MLDatasetTool-Linux/launch_clean.sh
+          echo "✓ Linux build packaged"
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MLDatasetTool-Linux
+          path: artifact/MLDatasetTool-Linux
+          retention-days: 30
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-13  # Use macOS 13 (x86_64) because Qt 5.15.2 doesn't support arm64
+    # FIXED: Removed dependency on build-linux to allow parallel execution
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '5.15.2'
+          host: 'mac'
+          target: 'desktop'
+          arch: 'clang_64'
+          # Don't specify modules - qtbase is included by default
+          cache: true
+
+      - name: Verify Qt installation
+        run: |
+          echo "Qt5_DIR=$Qt5_DIR"
+          qmake --version
+          echo "✓ Qt verified"
+
+      - name: Clean build directory
+        run: |
+          rm -rf build
+          echo "✓ Build directory cleaned"
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$Qt5_DIR" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.14
+          echo "✓ CMake configured"
+
+      - name: Build
+        run: |
+          cd build
+          make -j$(sysctl -n hw.ncpu)
+          echo "✓ Build completed"
+
+      - name: Verify build output
+        run: |
+          if [ -d build/MLDatasetTool.app ]; then
+            echo "✓ MLDatasetTool.app built successfully"
+            ls -lh build/MLDatasetTool.app/Contents/MacOS/
+          else
+            echo "✗ MLDatasetTool.app not found!"
+            echo "Contents of build directory:"
+            ls -la build/
+            exit 1
+          fi
+
+      - name: Verify Qt deployment (already done by CMake)
+        run: |
+          echo "Checking for Qt frameworks..."
+          if [ -d build/MLDatasetTool.app/Contents/Frameworks ]; then
+            echo "✓ Qt frameworks already bundled by CMake"
+            ls -la build/MLDatasetTool.app/Contents/Frameworks/
+          else
+            echo "⚠ Qt frameworks not found, running macdeployqt manually..."
+            cd build
+            macdeployqt MLDatasetTool.app -always-overwrite
+            echo "✓ Qt frameworks deployed manually"
+            if [ -d MLDatasetTool.app/Contents/Frameworks ]; then
+              ls -la MLDatasetTool.app/Contents/Frameworks/
+            fi
+          fi
+
+      - name: Package macOS build
+        run: |
+          mkdir -p artifact
+          cp -r build/MLDatasetTool.app artifact/
+          echo "✓ macOS build packaged"
+
+      - name: Create DMG (optional)
+        run: |
+          # Create a simple DMG for distribution
+          hdiutil create -volname "ML Dataset Tool" \
+                         -srcfolder artifact/MLDatasetTool.app \
+                         -ov -format UDZO \
+                         artifact/MLDatasetTool.dmg
+          echo "✓ DMG created"
+        continue-on-error: true
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MLDatasetTool-macOS
+          path: artifact/MLDatasetTool.app
+          retention-days: 30
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: MLDatasetTool-macOS-DMG
+          path: artifact/MLDatasetTool.dmg
+          retention-days: 30
+        if: success()
+        continue-on-error: true
+
+  create-release:
+    name: Create Release Summary
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: |
+          echo "=== Artifact Structure ==="
+          ls -R artifacts/
+          echo ""
+          echo "=== File Sizes ==="
+          du -sh artifacts/*
+
+      - name: Create release info
+        run: |
+          echo "# ML Dataset Preparation Tool - Build Successful! ✓" > release-info.md
+          echo "" >> release-info.md
+          echo "Multi-platform builds completed successfully!" >> release-info.md
+          echo "" >> release-info.md
+          echo "**Commit:** \`${{ github.sha }}\`" >> release-info.md
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> release-info.md
+          echo "**Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> release-info.md
+          echo "" >> release-info.md
+          echo "## Available Artifacts:" >> release-info.md
+          echo "" >> release-info.md
+          echo "### Windows 10" >> release-info.md
+          echo "- **File:** \`MLDatasetTool-Windows.zip\`" >> release-info.md
+          echo "- **Contents:** MLDatasetTool.exe with all Qt DLLs (standalone)" >> release-info.md
+          echo "- **Usage:** Extract and double-click \`MLDatasetTool.exe\`" >> release-info.md
+          echo "" >> release-info.md
+          echo "### macOS 10.14+" >> release-info.md
+          echo "- **File:** \`MLDatasetTool-macOS.zip\` or \`MLDatasetTool-macOS-DMG.zip\`" >> release-info.md
+          echo "- **Contents:** MLDatasetTool.app bundle with Qt frameworks" >> release-info.md
+          echo "- **Usage:** Extract and double-click \`MLDatasetTool.app\`" >> release-info.md
+          echo "- **Note:** Right-click and select 'Open' on first launch (Gatekeeper)" >> release-info.md
+          echo "" >> release-info.md
+          echo "### Linux/Ubuntu 18.04+" >> release-info.md
+          echo "- **File:** \`MLDatasetTool-Linux.zip\`" >> release-info.md
+          echo "- **Contents:** ImageClassificationTool binary with launcher scripts" >> release-info.md
+          echo "- **Usage:** Extract and run \`./run_app.sh\`" >> release-info.md
+          echo "" >> release-info.md
+          echo "## Features:" >> release-info.md
+          echo "- **Dual-Mode Operation:** Image Classification and Object Detection" >> release-info.md
+          echo "- **Cross-Platform:** Windows, macOS, and Linux support" >> release-info.md
+          echo "- **YOLO Format:** Object detection annotations in YOLO format" >> release-info.md
+          echo "- **Non-Destructive:** Original images are preserved" >> release-info.md
+          echo "" >> release-info.md
+          echo "## Documentation:" >> release-info.md
+          echo "- Windows: See \`BUILD_WINDOWS.md\`" >> release-info.md
+          echo "- macOS: See \`BUILD_MACOS.md\`" >> release-info.md
+          echo "- Linux: See \`README.md\`" >> release-info.md
+
+      - name: Upload release info
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-info
+          path: release-info.md
+          retention-days: 30

@@ -4,13 +4,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a dual-mode C++ GUI application for Linux/Ubuntu that assists with preparing machine learning datasets. It provides intuitive Qt5-based interfaces for:
+This is a cross-platform dual-mode C++ GUI application for **Windows 10**, **macOS**, and **Linux/Ubuntu** that assists with preparing machine learning datasets. It provides intuitive Qt5-based interfaces for:
 1. **Image Classification**: Manually labeling entire images and organizing them into category-based folders
 2. **Object Detection**: Drawing bounding boxes around objects and exporting annotations in YOLO format
 
 ## Build and Run Commands
 
-### Build the Application
+### Windows 10
+
+**Build:**
+```cmd
+build_windows.bat
+```
+This script configures CMake with Visual Studio generator, builds the project in Release mode, and automatically deploys Qt dependencies using windeployqt.
+
+**Manual build:**
+```cmd
+mkdir build && cd build
+cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH=C:\Qt\5.15.2\msvc2019_64 ..
+cmake --build . --config Release
+```
+
+**Run:**
+```cmd
+REM Simply double-click the executable:
+build\Release\MLDatasetTool.exe
+
+REM Or use the launcher:
+run_windows.bat
+```
+
+**Important:** No launcher scripts needed on Windows! The executable includes all Qt dependencies and runs standalone. See `BUILD_WINDOWS.md` for detailed instructions.
+
+### macOS
+
+**Build:**
+```bash
+./build_macos.sh
+```
+This script validates the environment, configures CMake, builds the project, and automatically bundles Qt frameworks using macdeployqt.
+
+**Manual build:**
+```bash
+mkdir build && cd build
+cmake -DCMAKE_PREFIX_PATH=$QT_PATH -DCMAKE_OSX_DEPLOYMENT_TARGET=10.14 ..
+make -j$(sysctl -n hw.ncpu)
+$QT_PATH/bin/macdeployqt MLDatasetTool.app
+```
+
+**Run:**
+```bash
+# Simply open the application bundle:
+open build/MLDatasetTool.app
+
+# Or use the launcher:
+./run_macos.sh
+```
+
+**Important:** No launcher scripts needed on macOS! The .app bundle includes all Qt frameworks and runs standalone. See `BUILD_MACOS.md` for detailed instructions.
+
+### Linux/Ubuntu
+
+**Build:**
 ```bash
 ./build.sh
 ```
@@ -23,13 +78,13 @@ cmake ..
 make
 ```
 
-### Run the Application
+**Run:**
 ```bash
 ./run_app.sh
 ```
 **Important:** Always use the launcher scripts (`run_app.sh` or `launch_clean.sh`) instead of direct execution. These scripts clean snap-related environment variables that cause glibc symbol lookup errors and Qt threading conflicts.
 
-### Install Dependencies
+**Install Dependencies:**
 ```bash
 ./install_dependencies.sh
 ```
