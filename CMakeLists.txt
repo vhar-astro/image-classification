@@ -74,6 +74,7 @@ target_link_libraries(${PROJECT_NAME}
 # Installation rules
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
+    BUNDLE DESTINATION .
 )
 
 # Platform-specific: Install Qt runtime dependencies
