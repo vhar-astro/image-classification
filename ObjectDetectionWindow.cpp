@@ -261,6 +261,12 @@ void ObjectDetectionWindow::addNewLabel()
         return;
     }
 
+    // Security check: Prevent newlines in labels to avoid corrupting classes.txt
+    if (newLabel.contains('\n') || newLabel.contains('\r')) {
+        QMessageBox::warning(this, "Invalid Label", "Label name cannot contain newlines.");
+        return;
+    }
+
     // Check if label already exists
     if (annotationManager.hasLabel(newLabel)) {
         QMessageBox::information(this, "Label Exists", "This label already exists.");

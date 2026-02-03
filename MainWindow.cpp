@@ -2,6 +2,7 @@
 #include <QFileInfo>
 #include <QDateTime>
 #include <QStandardPaths>
+#include <QRegularExpression>
 
 const QStringList MainWindow::IMAGE_EXTENSIONS = {"*.jpg", "*.jpeg", "*.png", "*.bmp", "*.JPG", "*.JPEG", "*.PNG", "*.BMP"};
 
@@ -289,6 +290,22 @@ void MainWindow::addNewCategory()
         return;
     }
     
+    // Security check: Prevent path traversal and invalid filename characters.
+    // Whitelist only alphanumeric, spaces, underscores, and dashes.
+    QRegularExpression re("^[a-zA-Z0-9_ -]+$");
+    if (!re.match(newCategory).hasMatch()) {
+        QMessageBox::warning(this, "Invalid Category",
+            "Category name contains invalid characters.\n"
+            "Only letters, numbers, spaces, underscores, and dashes are allowed.");
+        return;
+    }
+
+    // Additional check for length
+    if (newCategory.length() > 255) {
+        QMessageBox::warning(this, "Invalid Category", "Category name is too long.");
+        return;
+    }
+
     // Check if category already exists
     if (categories.contains(newCategory)) {
         QMessageBox::information(this, "Category Exists", "This category already exists.");
