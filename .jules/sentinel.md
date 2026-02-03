@@ -1,0 +1,4 @@
+## 2025-05-15 - [Path Traversal in Category Creation]
+**Vulnerability:** The application allowed arbitrary strings as category names, which were directly used in `QDir::mkpath()` to create directories. This enabled path traversal (e.g., using `../../`) to create directories and copy files outside of the intended `classified_images` folder.
+**Learning:** Desktop applications handling file operations often trust user-provided names for organizational units (like categories or labels). When these names are used to construct file paths, they must be treated as untrusted input.
+**Prevention:** Implement strict whitelisting for any user input that will be used as part of a file or directory name. Use regular expressions to allow only safe characters (alphanumeric, underscores, dashes, and spaces).
